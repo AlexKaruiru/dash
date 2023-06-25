@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.dash.security;
 
 import com.dash.services.UserService;
@@ -18,34 +14,34 @@ import java.io.IOException;
 
 public class JwtAuthFilter extends OncePerRequestFilter {
 
-    private JwtService jwtService;
     private UserService userService;
+    private JwtService jwtService;
 
-    public JwtAuthFilter(JwtService jwtService, UserService userService) {
-        this.jwtService = jwtService;
+    public JwtAuthFilter() {}
+
+    public void setUserService(UserService userService) {
         this.userService = userService;
     }
 
-    @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain) throws ServletException, IOException {
+    public void setJwtService(JwtService jwtService) {
+        this.jwtService = jwtService;
+    }
 
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         var authorization = request.getHeader("Authorization");
 
-        if(authorization != null && authorization.startsWith("Bearer")){
-            String token = authorization.split(" ")[1];
-            var isValid = jwtService.validateToken(token);
+        if (authorization != null && authorization.startsWith("Bearer")) {
+            String token = authorization.substring(7); // Remove "Bearer " prefix
+            boolean isValid = jwtService.validateToken(token);
 
-            if (isValid){
-                var userPassword = jwtService.getUserPassword(token);
-                var userDetails = userService.loadUserByUsername(userPassword);
-                UsernamePasswordAuthenticationToken user = new
-                        UsernamePasswordAuthenticationToken(
-                                userDetails, null, userDetails.getAuthorities());
-                user.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(user);
+            if (isValid) {                
+                var userEmail = jwtService.getUserEmail(token);
+                var userDetails = userService.getUserByEmail(userEmail);
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         }
 

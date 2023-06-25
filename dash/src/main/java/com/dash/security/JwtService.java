@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.dash.security;
 
 import com.dash.models.User;
@@ -12,7 +8,6 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
@@ -25,43 +20,39 @@ public class JwtService {
     @Value("${security.jwt.signature-key}")
     private String signatureKey;
 
-    public String generateToken(User user){
-        long expString = Long.valueOf(expiration);
-        LocalDateTime expirationDateTime = LocalDateTime.now()
-                .plusMinutes(expString);
+    public String generateToken(User user) {
+    long expirationMillis = Long.parseLong(expiration);
+    LocalDateTime expirationDateTime = LocalDateTime.now().plusMinutes(expirationMillis / (1000 * 60));
 
-        Instant instant = expirationDateTime.atZone(ZoneId.systemDefault()).toInstant();
-        Date date = Date.from(instant);
-        return Jwts
-                .builder()
-                .setSubject(user.getLogin())
-                .setExpiration(date)
-                .signWith(SignatureAlgorithm.HS512, signatureKey)
-                .compact();
-    }
+    Date expirationDate = Date.from(expirationDateTime.atZone(ZoneId.systemDefault()).toInstant());
 
-    private Claims getClaims (String token) throws ExpiredJwtException {
-        return Jwts
-                .parser()
+    return Jwts.builder()
+            .setSubject(user.getEmail())
+            .setExpiration(expirationDate)
+            .signWith(SignatureAlgorithm.HS512, signatureKey)
+            .compact();
+}
+
+
+    private Claims getClaims(String token) throws ExpiredJwtException {
+        return Jwts.parser()
                 .setSigningKey(signatureKey)
                 .parseClaimsJws(token)
                 .getBody();
     }
 
-    public boolean validateToken (String token){
-        try{
+    public boolean validateToken(String token) {
+        try {
             Claims claims = getClaims(token);
             Date expirationDate = claims.getExpiration();
-            var localDateTime =
-                    expirationDate.toInstant()
-                            .atZone(ZoneId.systemDefault()).toLocalDateTime();
-            return !LocalDateTime.now().isAfter(localDateTime);
-        }catch (Exception e){
+            LocalDateTime expirationDateTime = LocalDateTime.ofInstant(expirationDate.toInstant(), ZoneId.systemDefault());
+            return !LocalDateTime.now().isAfter(expirationDateTime);
+        } catch (Exception e) {
             return false;
         }
     }
 
-    public String getUserPassword(String token) throws ExpiredJwtException{
-        return (String) getClaims(token).getSubject();
+    public String getUserEmail(String token) throws ExpiredJwtException {
+        return getClaims(token).getSubject();
     }
 }

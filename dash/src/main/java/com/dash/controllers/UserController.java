@@ -56,6 +56,7 @@ public class UserController {
             User user = userService.getUserByEmail(credencialDTO.getEmail());
 
             if (user.getPassword().equals(credencialDTO.getPassword())) {
+                userService.authenticate(user.getEmail(), user.getPassword());
                 String token = jwtService.generateToken(user);
                 return new TokenDTO(user.getEmail(), token);
             } else {
@@ -65,6 +66,7 @@ public class UserController {
             throw new UsernameNotFoundException("Invalid email or password");
         }
     }
+
 
     @PostMapping("/logout")
     @ApiOperation("Logout the authenticated user")
@@ -79,7 +81,7 @@ public class UserController {
     }
 
     @DeleteMapping("/{userId}")
-    public ResponseEntity<String> deleteUser(@PathVariable String userId) {
+    public ResponseEntity<String> deleteUser(@PathVariable Long userId) {
         userService.deleteUser(userId);
         return new ResponseEntity<>("User deleted successfully", HttpStatus.OK);
     }
@@ -104,7 +106,7 @@ public class UserController {
 
     @GetMapping("/profile/{email}")
     public ResponseEntity<User> getUserProfile(@PathVariable String email) {
-        User user = userService.getUserProfile(email);
+        User user = userService.getUserByEmail(email);
         return new ResponseEntity<>(user, HttpStatus.OK);
     }
 }

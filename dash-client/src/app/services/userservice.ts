@@ -35,8 +35,13 @@ export class UserService {
     return this.http.get<User>(`${this.apiUrl}/profile/${email}`);
   }
 
-  authenticate(user: User): Observable<any> {
-    return this.http.post(`${this.apiUrl}/auth`, user);
+  authenticate(email: string, password: string): Observable<any> {
+    const credentials = {
+      email: email,
+      password: password,
+    };
+
+    return this.http.post(`${this.apiUrl}/auth`, credentials);
   }
 
   logout(): Observable<void> {

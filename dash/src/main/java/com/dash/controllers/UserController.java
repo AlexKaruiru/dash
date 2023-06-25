@@ -16,7 +16,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -26,14 +25,12 @@ import java.util.List;
 @RequestMapping("/users")
 public class UserController {
 
-    private final PasswordEncoder passwordEncoder;
     private final UserService userService;
     private final JwtService jwtService;
 
     @Autowired
-    public UserController(UserService userService, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public UserController(UserService userService, JwtService jwtService) {
         this.userService = userService;
-        this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
     }
 
@@ -45,8 +42,6 @@ public class UserController {
             @ApiResponse(code = 400, message = "Validation Error")
     })
     public User registerUser(@RequestBody @Valid User user) {
-        String encryptedPassword = passwordEncoder.encode(user.getPassword());
-        user.setPassword(encryptedPassword);
         return userService.createUser(user);
     }
 
@@ -59,15 +54,13 @@ public class UserController {
     public TokenDTO authenticate(@RequestBody CredencialDTO credencialDTO) {
         try {
             User user = userService.getUserByEmail(credencialDTO.getEmail());
-            User userBuild = new User();
-            userBuild.setEmail(credencialDTO.getEmail());
-            userBuild.setPassword(credencialDTO.getPassword());
 
-            userService.authenticate(userBuild);
-            String token = jwtService.generateToken(userBuild);
-
-            return new TokenDTO(userBuild.getEmail(), token);
-
+            if (user.getPassword().equals(credencialDTO.getPassword())) {
+                String token = jwtService.generateToken(user);
+                return new TokenDTO(user.getEmail(), token);
+            } else {
+                throw new InvalidPasswordException();
+            }
         } catch (UserNotFoundException | InvalidPasswordException e) {
             throw new UsernameNotFoundException("Invalid email or password");
         }
